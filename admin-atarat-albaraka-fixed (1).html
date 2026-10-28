@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#193d2e" />
+  <title>لوحة إدارة المتجر</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-main: #0c1a14;
+      --bg-card: #13261d;
+      --bg-card-hover: #1b3528;
+      --primary: #2d6a4f;
+      --primary-light: #40916c;
+      --accent: #d4af37;
+      --accent-glow: rgba(212, 175, 55, 0.35);
+      --text-main: #f0f4f1;
+      --text-muted: #a3b18a;
+      --border-color: rgba(212, 175, 55, 0.2);
+      --danger: #e63946;
+      --success: #2a9d8f;
+      --warning: #e9c46a;
+      --radius: 16px;
+      --transition: all 0.3s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; }
+
+    .connection-status { padding: 6px 20px; font-size: .85rem; background: #26352c; color: #f5d76e; text-align: center; }
+    .connection-status[data-state="connected"] { background: rgba(42,157,143,.15); color: #8be0c5; }
+    .connection-status[data-state="offline"] { background: rgba(230,57,70,.12); color: #ffadb4; }
+    .danger-link { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: 800; }
+    .action-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: var(--transition); }
+    .btn-block { background: var(--danger); color: #fff; }
+    .btn-unblock { background: var(--success); color: #fff; }
+    .btn-msg { background: var(--primary-light); color: #fff; margin-left: 5px; }
+    
+    .danger-link:disabled, button:disabled { opacity: .55; cursor: wait; }
+    .empty-state { color: var(--text-muted); padding: 18px; text-align: center; }
+    .order-items { margin: 10px 0; background: rgba(0,0,0,.2); padding: 10px; border-radius: 8px; overflow-wrap: anywhere; }
+    .order-items > div { padding: 3px 0; }
+    .order-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:12px; }
+    .order-total { color: var(--accent); font-weight: 900; }
+    .order-status-select { background:var(--bg-card); color:#fff; border:1px solid var(--border-color); padding:7px 10px; border-radius:8px; }
+    .order-time { display:block; color:var(--text-muted); margin-top:5px; }
+    .admin-chat-message { padding:8px 12px; border-radius:10px; max-width:85%; overflow-wrap:anywhere; }
+    .admin-chat-message small { display:block; color:var(--accent); font-size:.75rem; margin-bottom:4px; }
+    .admin-chat-message.from-admin { align-self:flex-end; background:var(--primary); }
+    .admin-chat-message.from-customer { align-self:flex-start; background:rgba(212,175,55,.15); }
+    .user-item { display:block; width:100%; text-align:right; background:transparent; border:0; color:var(--text-main); font:inherit; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+    .user-item:hover, .user-item.active { background: var(--primary); }
+    .custom-table { width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 650px; }
+    .custom-table th, .custom-table td { padding: 12px 16px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .custom-table th { color: var(--accent); font-weight: 700; background: rgba(0,0,0,0.2); }
+
+    /* Top Bar */
+    .admin-topbar {
+      background: rgba(19, 38, 29, 0.95); border-bottom: 1px solid var(--border-color);
+      padding: 16px 30px; display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
+    }
+    .brand-title { display: flex; align-items: center; gap: 10px; color: var(--accent); font-size: 1.3rem; font-weight: 800; }
+    .store-link { color: var(--text-main); text-decoration: none; font-weight: 600; border: 1px solid var(--border-color); padding: 6px 16px; border-radius: 20px; transition: var(--transition); }
+    .store-link:hover { background: var(--primary); border-color: var(--accent); }
+
+    /* Layout */
+    .admin-shell { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 70px); }
+
+    /* Sidebar */
+    .admin-sidebar { background: var(--bg-card); border-left: 1px solid var(--border-color); padding: 20px 15px; }
+    .nav-btn {
+      width: 100%; text-align: right; background: none; border: none; color: var(--text-muted);
+      padding: 14px 18px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 12px; margin-bottom: 8px; transition: var(--transition);
+    }
+    .nav-btn:hover, .nav-btn.active { background: var(--primary); color: #fff; border: 1px solid var(--border-color); }
+
+    /* Main Panels */
+    .admin-main { padding: 30px; overflow-y: auto; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .page-title { font-size: 1.8rem; color: #fff; margin-bottom: 20px; border-right: 4px solid var(--accent); padding-right: 12px; }
+
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; text-align: center; }
+    .stat-card span { font-size: 2rem; display: block; margin-bottom: 5px; }
+    .stat-card h3 { font-size: 1.8rem; color: var(--accent); }
+    .stat-card p { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Form & Cards */
+    .admin-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px; margin-bottom: 30px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.9rem; color: var(--accent); font-weight: 600; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: var(--bg-main); border: 1px solid var(--border-color); color: #fff;
+      padding: 10px; border-radius: 8px; outline: none; font-size: 0.95rem;
+    }
+
+    .primary-btn {
+      background: linear-gradient(45deg, var(--accent), #f39c12); color: #000;
+      padding: 10px 24px; border-radius: 20px; font-weight: 800; border: none;
+      cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px;
+    }
+    .primary-btn:hover { transform: translateY(-2px); box-shadow: 0 0 15px var(--accent-glow); }
+
+    .img-preview { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-top: 8px; border: 1px solid var(--border-color); display: none; }
+
+    .feature-preview { width:100%; max-width:420px; aspect-ratio:16/7; object-fit:cover; border-radius:12px; border:1px solid var(--border-color); margin-top:8px; display:none; }
+    .admin-ad-item { display:grid; grid-template-columns:110px 1fr auto; gap:14px; align-items:center; padding:12px; margin-top:12px; border:1px solid var(--border-color); border-radius:12px; background:rgba(0,0,0,.14); }
+    .admin-ad-item img { width:110px; height:72px; object-fit:cover; border-radius:8px; }
+    .admin-ad-item p { color:var(--text-muted); font-size:.9rem; overflow-wrap:anywhere; }
+    .admin-note { color:var(--text-muted); font-size:.9rem; line-height:1.8; margin:8px 0 16px; }
+    /* Orders List */
+    .order-card { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .order-header { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; margin-bottom: 12px; }
+    .order-status { padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; background: var(--primary); color: #fff; }
+
+    /* Chat Layout */
+    .chat-admin-grid { display: grid; grid-template-columns: 240px 1fr; gap: 20px; height: 450px; }
+    .chat-users { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; overflow-y: auto; }
+    .chat-box { background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-msgs { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .chat-input-wrap { display: flex; padding: 10px; border-top: 1px solid var(--border-color); }
+    .chat-input-wrap input { flex: 1; background: var(--bg-card); border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 6px; }
+
+    /* Switch Style for Store Status */
+    .toggle-container { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+    .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--success); }
+    input:checked + .slider:before { transform: translateX(24px); }
+
+    @media (max-width: 768px) {
+      .admin-shell { grid-template-columns: 1fr; }
+      .admin-sidebar { display: flex; overflow-x: auto; padding: 10px; }
+      .nav-btn { white-space: nowrap; margin-bottom: 0; width: auto; flex: 0 0 auto; }
+      .admin-main { padding: 18px 12px; }
+      .admin-card { padding: 16px; overflow-x: auto; }
+      .page-title { font-size: 1.4rem; }
+      .chat-admin-grid { grid-template-columns: 1fr; height: auto; }
+      .chat-users { max-height: 170px; }
+      .chat-box { min-height: 340px; }
+      .admin-ad-item { grid-template-columns:75px 1fr; }
+      .admin-ad-item img { width:75px; height:65px; }
+      .admin-ad-item .ad-actions { grid-column:1/-1; }
+      .admin-topbar { padding: 12px 14px; gap: 12px; }
+      .brand-title { font-size: 1rem; }
+    }
+  
+/* تحسينات إضافية للوحة التحكم والهاتف */
+.orders-tools{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}.orders-tools input,.orders-tools select{background:var(--bg-main);border:1px solid var(--border-color);border-radius:10px;padding:10px;color:var(--text-main);min-width:0;flex:1}
+.stock-field-note{font-size:.8rem;color:var(--text-muted);margin-top:4px}
+@media(max-width:700px){.custom-table{display:block;overflow-x:auto;white-space:nowrap}.form-grid{grid-template-columns:1fr!important}.admin-card{padding:14px!important}.orders-tools{display:grid;grid-template-columns:1fr}.page-title{font-size:1.3rem}}
+
+</style>
+</head>
+<body>
+
+  <!-- الترويسة العليا -->
+  <header class="admin-topbar">
+    <div class="brand-title">
+      <span>🌿</span>
+      <span id="headerStoreName">لوحة التحكم | المتجر</span>
+    </div>
+    <a href="index.html" class="store-link" target="_blank" rel="noopener noreferrer">عرض المتجر ↗</a>
+  </header>
+
+  <div id="connectionStatus" class="connection-status" data-state="offline" role="status">جاري الاتصال بفايربيس...</div>
+
+  <div class="admin-shell">
+    <!-- الشريط الجانبي -->
+    <aside class="admin-sidebar">
+      <button class="nav-btn active" onclick="showPanel('dashboardPanel', this)"><span>▦</span> الرئيسية</button>
+      <button class="nav-btn" onclick="showPanel('settingsPanel', this)"><span>⚙️</span> إعدادات المتجر</button>
+      <button class="nav-btn" onclick="showPanel('productsPanel', this)"><span>🧺</span> إدارة المنتجات</button>
+      <button class="nav-btn" onclick="showPanel('ordersPanel', this)"><span>📦</span> الطلبات والتوصيل</button>
+      <button class="nav-btn" onclick="showPanel('customersPanel', this)"><span>👥</span> إدارة العملاء</button>
+      <button class="nav-btn" onclick="showPanel('visitorsPanel', this)"><span>🕒</span> سجل الزيارات</button>
+      <button class="nav-btn" onclick="showPanel('bannerPanel', this)"><span>📣</span> الشريط الإعلاني</button>
+      <button class="nav-btn" onclick="showPanel('imageAdsPanel', this)"><span>🖼️</span> إعلانات الصور</button>
+      <button class="nav-btn" onclick="showPanel('notificationsPanel', this)"><span>🔔</span> إشعارات المتجر</button>
+      <button class="nav-btn" onclick="showPanel('activityLogPanel', this)"><span>🧾</span> سجل العمليات</button>
+      <button class="nav-btn" id="navChatBtn" onclick="showPanel('chatPanel', this)"><span>💬</span> محادثات العملاء</button>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="admin-main">
+      
+      <!-- 1. الرئيسية -->
+      <section class="panel active" id="dashboardPanel">
+        <h2 class="page-title">نظرة عامة على المتجر</h2>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span>🧺</span>
+            <h3 id="statProductsCount">0</h3>
+            <p>إجمالي المنتجات</p>
+          </div>
+          <div class="stat-card">
+            <span>📦</span>
+            <h3 id="statOrdersCount">0</h3>
+            <p>إجمالي الطلبات</p>
+          </div>
+          <div class="stat-card">
+            <span>👥</span>
+            <h3 id="statCustomersCount">0</h3>
+            <p>إجمالي العملاء</p>
+          </div>
+          <div class="stat-card">
+            <span>💬</span>
+            <h3 id="statChatsCount">0</h3>
+            <p>محادثات العملاء</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. إعدادات المتجر -->
+      <section class="panel" id="settingsPanel">
+        <h2 class="page-title">إعدادات المتجر الأساسية</h2>
+        <div class="admin-card">
+          <form id="settingsForm">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>اسم المتجر</label>
+                <input id="storeNameInput" placeholder="أدخل اسم المتجر..." required />
+              </div>
+              <div class="form-group">
+                <label>الجملة الصغيرة تحت اسم المتجر</label><input id="storeSubtitleInput" placeholder="ريحة زمان.. وجودة كل يوم" />
+              </div>
+              <div class="form-group">
+                <label>عنوان الواجهة الرئيسية</label><input id="heroTitleInput" placeholder="طعم أصيل، وريحه تفتح النفس" />
+              </div>
+              <div class="form-group full">
+                <label>وصف الواجهة الرئيسية</label><textarea id="heroTextInput" rows="2" placeholder="اكتب وصفًا جذابًا للمتجر..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>نص زر التسوق</label><input id="heroButtonTextInput" placeholder="تسوّق المنتجات الآن" />
+              </div>
+              <div class="form-group">
+                <label>رقم واتساب مع مفتاح الدولة</label><input id="whatsappNumberInput" inputmode="tel" placeholder="مثال مصر: 2010xxxxxxx" /><small>اكتب الأرقام فقط مع مفتاح الدولة، بدون + أو مسافات.</small>
+              </div>
+              <div class="form-group full">
+                <label>رابط صفحة فيسبوك</label><input id="facebookUrlInput" type="url" placeholder="https://www.facebook.com/yourpage" />
+              </div>
+              <div class="form-group">
+                <label>عنوان قسم التواصل</label><input id="contactTitleInput" placeholder="تواصل مع عطارة البركة" />
+              </div>
+              <div class="form-group">
+                <label>رسالة قسم التواصل</label><input id="contactTextInput" placeholder="يسعدنا تواصلك معنا..." />
+              </div>
+              <div class="form-group full">
+                <label>تغيير لوجو المتجر</label><input id="storeLogoFileInput" type="file" accept="image/*" />
+                <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap"><img id="storeLogoPreview" alt="معاينة اللوجو" style="display:none;width:76px;height:76px;object-fit:contain;border-radius:12px;border:1px solid var(--border-color);padding:5px" /><button type="button" class="action-btn" id="removeStoreLogoBtn">إزالة اللوجو الحالي</button></div>
+                <small>يفضل صورة مربعة وخفيفة. تُضغط الصورة قبل حفظها في قاعدة البيانات.</small>
+              </div>
+              <div class="form-group full">
+                <label>حالة المتجر (فتح / إغلاق)</label>
+                <div class="toggle-container">
+                  <label class="switch">
+                    <input type="checkbox" id="storeStatusToggle">
+                    <span class="slider"></span>
+                  </label>
+                  <span id="storeStatusText" style="font-weight: 700; color: var(--accent);">المتجر مفتوح الآن</span>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="primary-btn">حفظ الإعدادات 💾</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 3. إضافة وإدارة المنتجات -->
+      <section class="panel" id="productsPanel">
+        <h2 class="page-title">إدارة الكتالوج والمنتجات</h2>
+        
+        <div class="admin-card">
+          <h3 id="productFormHeading" style="color:var(--accent); margin-bottom:15px;">إضافة منتج جديد</h3>
+          <form id="productForm">
+            <input id="editingProductId" type="hidden" value="">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>اسم المنتج</label>
+                <input id="pName" placeholder="مثلاً: قرفة سيلاني طازجة" required />
+              </div>
+              <div class="form-group">
+                <label>القسم</label>
+                <select id="pCategory">
+                  <option>عام / بدون قسم</option>
+                  <option>توابل</option>
+                  <option>أعشاب</option>
+                  <option>مشروبات</option>
+                  <option>خلطات خاصة</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>طريقة البيع</label>
+                <select id="pType">
+                  <option value="loose">سايب بالوزن (سعر الكيلو)</option>
+                  <option value="pack">كيس / عبوة واحدة</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>السعر (ج.م)</label>
+                <input id="pPrice" type="number" min="0" step="0.01" placeholder="1000" required />
+              </div>
+              <div class="form-group">
+                <label>الكمية المتاحة (اختياري)</label>
+                <input id="pStock" type="number" min="0" step="1" placeholder="اتركه فارغًا لو المخزون غير محدد" />
+                <small class="stock-field-note">عند تحديد الكمية، سيظهر للعميل تنبيه نفاد المخزون أو قرب نفاده.</small>
+              </div>
+              <div class="form-group full">
+                <label>رفع صورة المنتج من الجهاز / التليفون</label>
+                <input id="pImageFile" type="file" accept="image/*" />
+                <img id="pImagePreview" class="img-preview" alt="معاينة الصورة" />
+              </div>
+              <div class="form-group full">
+                <label>وصف المنتج</label>
+                <textarea id="pDesc" rows="2" placeholder="اكتب وصفاً مختصراً وفوائد المنتج..."></textarea>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button id="productSubmitBtn" type="submit" class="primary-btn">حفظ وإضافة المنتج ＋</button><button id="cancelProductEdit" type="button" class="action-btn" style="display:none">إلغاء التعديل</button></div>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h3 style="color:var(--accent); margin-bottom:15px;">المنتجات الحالية</h3>
+          <div class="form-group" style="margin-bottom:12px"><label for="productCatalogSearch">بحث سريع في الكتالوج</label><input id="productCatalogSearch" placeholder="اكتب اسم المنتج أو القسم..." /></div>
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>الصورة</th>
+                <th>المنتج</th>
+                <th>القسم</th>
+                <th>النوع</th>
+                <th>السعر</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody">
+              <!-- المنتجات -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. الطلبات الواردة وتحديد سعر التوصيل -->
+      <section class="panel" id="ordersPanel">
+        <h2 class="page-title">طلبات العملاء (وتحديد سعر التوصيل)</h2>
+        <div class="orders-tools"><input id="ordersSearch" placeholder="بحث برقم الطلب أو اسم العميل أو الهاتف"><select id="ordersStatusFilter"><option value="all">كل حالات الطلبات</option><option>جديد</option><option>قيد التجهيز</option><option>تم الشحن</option><option>مكتمل</option></select></div>
+        <div id="ordersContainer">
+          <!-- الطلبات -->
+        </div>
+      </section>
+
+      <!-- 5. إدارة العملاء -->
+      <section class="panel" id="customersPanel">
+        <h2 class="page-title">بيانات وإدارة العملاء</h2>
+        <div class="admin-card">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>الاسم / المعرف</th>
+                <th>الهاتف</th>
+                <th>تاريخ أول دخول / تفاعل</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="customersTableBody">
+              <!-- العملاء -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="visitorsPanel">
+        <h2 class="page-title">سجل زيارات المتجر</h2><div class="admin-card">
+          <p style="color:var(--text-muted);margin-top:0">يسجل وقت الدخول وآخر ظهور ووقت الخروج عندما يبلغ المتصفح بذلك. قد لا يُسجل الخروج فورًا إذا انقطع الإنترنت أو أُغلقت الصفحة بالقوة.</p>
+          <div class="form-grid" style="margin-bottom:12px"><div class="form-group"><label>بحث بالاسم أو معرّف الزيارة</label><input id="visitorSearchInput" placeholder="ابحث عن زيارة..."></div><div class="form-group"><label>الحالة</label><select id="visitorStatusFilter"><option value="all">كل الزيارات</option><option value="inside">داخل المتجر</option><option value="left">غادر المتجر</option></select></div></div>
+          <div style="overflow-x:auto"><table class="custom-table"><thead><tr><th>الزائر</th><th>وقت الدخول</th><th>آخر ظهور</th><th>وقت الخروج</th><th>الحالة</th></tr></thead><tbody id="visitorSessionsBody"><tr><td colspan="5">جاري تحميل الزيارات...</td></tr></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- 6. تعديل الشريط الإعلاني المتحرك -->
+      <section class="panel" id="bannerPanel">
+        <h2 class="page-title">الشريط الإعلاني المتحرك</h2>
+        <div class="admin-card">
+          <form id="announcementForm">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>نص الإعلان المتحرك (افصل بين الجمل بـ |)</label>
+                <textarea id="announcementInput" rows="3" placeholder="مثال: عروض خاصة على جميع التوابل | توصيل سريع لجميع المناطق | خصومات كبرى اليوم" required></textarea>
+              </div>
+            </div>
+            <button type="submit" class="primary-btn">تحديث وحفظ الإعلان المتحرك 📣</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 7. إعلانات الصور المتحركة -->
+      <section class="panel" id="imageAdsPanel">
+        <h2 class="page-title">إعلانات الصور المتحركة</h2>
+        <div class="admin-card">
+          <p class="admin-note">أضف إعلانًا بصورة وعنوان ووصف ورابط اختياري. سيظهر في المتجر داخل مساحة إعلانية متحركة، ويمكنك تعطيله أو حذفه لاحقًا. يُفضّل اختيار صورة عريضة واضحة.</p>
+          <form id="imageAdForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>عنوان الإعلان</label>
+                <input id="adImageTitle" maxlength="90" placeholder="مثلاً: عروض الأسبوع" required>
+              </div>
+              <div class="form-group">
+                <label>نص الإعلان</label>
+                <input id="adImageText" maxlength="220" placeholder="اكتشف تشكيلتنا الجديدة">
+              </div>
+              <div class="form-group">
+                <label>نص زر الإعلان</label>
+                <input id="adImageButton" maxlength="35" placeholder="تسوق الآن">
+              </div>
+              <div class="form-group">
+                <label>الرابط عند الضغط (اختياري)</label>
+                <input id="adImageLink" placeholder="#products أو https://example.com">
+              </div>
+              <div class="form-group full">
+                <label>صورة الإعلان من الجهاز / الهاتف</label>
+                <input id="adImageFile" type="file" accept="image/*" required>
+                <img id="adImagePreview" class="feature-preview" alt="معاينة صورة الإعلان">
+              </div>
+            </div>
+            <button type="submit" class="primary-btn">نشر الإعلان ✨</button>
+          </form>
+        </div>
+        <div class="admin-card">
+          <h3 style="color:var(--accent);margin-bottom:8px">الإعلانات المنشورة</h3>
+          <div id="imageAdsList"><p class="empty-state">جاري تحميل الإعلانات...</p></div>
+        </div>
+      </section>
+
+      <!-- 8. إشعارات المتجر -->
+      <section class="panel" id="notificationsPanel">
+        <h2 class="page-title">إرسال إشعار إلى المتجر</h2>
+        <div class="admin-card">
+          <p class="admin-note">الإشعار يُحفظ في قاعدة بيانات المتجر ويظهر في مركز الإشعارات مباشرة لكل الزوار. اكتب عنوانًا ورسالة واضحة.</p>
+          <form id="storeNotificationForm">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>عنوان الإشعار</label>
+                <input id="storeNotificationTitle" maxlength="100" placeholder="مثلاً: عروض جديدة وصلت" required>
+              </div>
+              <div class="form-group full">
+                <label>نص الإشعار</label>
+                <textarea id="storeNotificationMessage" rows="3" maxlength="700" placeholder="اكتب تفاصيل الإشعار..." required></textarea>
+              </div>
+              <div class="form-group">
+                <label>نوع الإشعار</label>
+                <select id="storeNotificationType">
+                  <option value="general">عام</option>
+                  <option value="offer">عرض وخصم</option>
+                  <option value="order">الطلبات</option>
+                  <option value="important">مهم</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="primary-btn">إرسال الإشعار 🔔</button>
+          </form>
+        </div>
+        <div class="admin-card">
+          <h3 style="color:var(--accent);margin-bottom:8px">آخر الإشعارات</h3>
+          <div id="adminStoreNotifications"><p class="empty-state">جاري تحميل الإشعارات...</p></div>
+        </div>
+      </section>
+
+      <!-- سجل العمليات -->
+      <section class="panel" id="activityLogPanel">
+        <h2 class="page-title">سجل العمليات</h2>
+        <div class="admin-card"><p class="admin-note">يسجل هذا القسم التعديلات المهمة على المنتجات والإشعارات. يعتمد ظهوره على صلاحيات قاعدة البيانات.</p><div id="activityLogList"><p class="empty-state">جاري تحميل السجل...</p></div></div>
+      </section>
+
+      <!-- 9. المحادثات -->
+      <section class="panel" id="chatPanel">
+        <h2 class="page-title">محادثات واستفسارات العملاء</h2>
+        <div class="admin-card">
+          <div class="chat-admin-grid">
+            <div class="chat-users" id="chatUsersList">
+              <!-- المحادثات -->
+            </div>
+            <div class="chat-box">
+              <div class="chat-msgs" id="adminChatMsgs">
+                <p style="color:var(--text-muted); text-align:center; margin-top:20px;">اختر محادثة من القائمة للرد</p>
+              </div>
+              <form class="chat-input-wrap" id="adminChatForm">
+                <input id="adminChatInput" placeholder="اكتب ردك للعميل..." required />
+                <button type="submit" class="primary-btn" style="padding:6px 16px; margin-right:8px;">إرسال</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDsvNr5yJs4jMzAVwqc7g_Kti-_r3ntQa0",
+  authDomain: "alnoorstore.firebaseapp.com",
+  databaseURL: "https://alnoorstore-default-rtdb.firebaseio.com",
+  projectId: "alnoorstore",
+  storageBucket: "alnoorstore.firebasestorage.app",
+  messagingSenderId: "817663342597",
+  appId: "1:817663342597:web:aa2fa45e14ae4ea79f446c",
+  measurementId: "G-QZYEDYJT25"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let activeChatUser = null;
+let activeChatRef = null;
+let activeChatHandler = null;
+let currentBase64Image = "";
+
+const connectionStatus = document.getElementById('connectionStatus');
+const productsTableBody = document.getElementById('productsTableBody');
+const ordersContainer = document.getElementById('ordersContainer');
+const customersTableBody = document.getElementById('customersTableBody');
+const chatUsersList = document.getElementById('chatUsersList');
+const adminChatMsgs = document.getElementById('adminChatMsgs');
+
+function money(value) {
+  const n = Number(value);
+  return `${(Number.isFinite(n) ? n : 0).toFixed(2)} ج.م`;
+}
+
+async function logActivity(action, details) {
+  try { await db.ref('activityLog').push({ action, details: String(details || ''), timestamp: Date.now(), actor: 'admin' }); }
+  catch (error) { console.warn('تعذر تسجيل العملية في activityLog:', error); }
+}
+
+function setConnection(state, message) {
+  if (!connectionStatus) return;
+  connectionStatus.dataset.state = state;
+  connectionStatus.textContent = message;
+}
+
+function showPanel(panelId, btn) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+window.showPanel = showPanel;
+
+db.ref('.info/connected').on('value', snapshot => {
+  const connected = snapshot.val() === true;
+  setConnection(connected ? 'connected' : 'offline', connected ? 'متصل بقاعدة بيانات Firebase' : 'غير متصل بقاعدة البيانات.');
+});
+
+// إعدادات المتجر
+const settingsForm = document.getElementById('settingsForm');
+const storeNameInput = document.getElementById('storeNameInput');
+const storeStatusToggle = document.getElementById('storeStatusToggle');
+const storeStatusText = document.getElementById('storeStatusText');
+const headerStoreName = document.getElementById('headerStoreName');
+let pendingStoreLogo = undefined;
+
+db.ref('settings').on('value', snapshot => {
+  const settings = snapshot.val() || {};
+  const name = settings.storeName || "عطارة البركة";
+  const isOpen = settings.isOpen !== false;
+
+  storeNameInput.value = name;
+  document.getElementById('storeSubtitleInput').value = settings.storeSubtitle || 'ريحة زمان.. وجودة كل يوم';
+  document.getElementById('heroTitleInput').value = settings.heroTitle || 'طعم أصيل، وريحه تفتح النفس';
+  document.getElementById('heroTextInput').value = settings.heroText || 'أعشاب وتوابل أصلية مختارة بعناية فائقة. اطلب الوزن الذي تحتاجه بالضبط.';
+  document.getElementById('heroButtonTextInput').value = settings.heroButtonText || 'تسوّق المنتجات الآن';
+  document.getElementById('whatsappNumberInput').value = settings.whatsappNumber || '';
+  document.getElementById('facebookUrlInput').value = settings.facebookUrl || '';
+  document.getElementById('contactTitleInput').value = settings.contactTitle || '';
+  document.getElementById('contactTextInput').value = settings.contactText || '';
+  const logoPreview = document.getElementById('storeLogoPreview');
+  if (settings.storeLogo) { logoPreview.src = settings.storeLogo; logoPreview.style.display = 'block'; } else { logoPreview.removeAttribute('src'); logoPreview.style.display = 'none'; }
+  headerStoreName.textContent = `لوحة التحكم | ${name}`;
+  storeStatusToggle.checked = isOpen;
+  storeStatusText.textContent = isOpen ? "المتجر مفتوح الآن" : "المتجر مغلق حالياً";
+});
+
+settingsForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const storeName = storeNameInput.value.trim();
+  const isOpen = storeStatusToggle.checked;
+  const whatsappNumber = document.getElementById('whatsappNumberInput').value.replace(/[^0-9]/g, '');
+  const facebookUrl = document.getElementById('facebookUrlInput').value.trim();
+  if (facebookUrl && !/^https?:\/\//i.test(facebookUrl)) return alert('رابط فيسبوك يجب أن يبدأ بـ https://');
+  const payload = {
+    storeName, isOpen,
+    storeSubtitle: document.getElementById('storeSubtitleInput').value.trim(),
+    heroTitle: document.getElementById('heroTitleInput').value.trim(),
+    heroText: document.getElementById('heroTextInput').value.trim(),
+    heroButtonText: document.getElementById('heroButtonTextInput').value.trim(),
+    whatsappNumber, facebookUrl,
+    contactTitle: document.getElementById('contactTitleInput').value.trim(),
+    contactText: document.getElementById('contactTextInput').value.trim(),
+    settingsUpdatedAt: Date.now()
+  };
+  if (pendingStoreLogo !== undefined) payload.storeLogo = pendingStoreLogo;
+  try {
+    await db.ref('settings').update(payload);
+    await logActivity('تحديث إعدادات المتجر', 'الاسم والتصميم ووسائل التواصل' + (pendingStoreLogo !== undefined ? ' واللوجو' : ''));
+    pendingStoreLogo = undefined;
+    document.getElementById('storeLogoFileInput').value = '';
+    alert('تم حفظ إعدادات المتجر بنجاح.');
+  } catch (error) { console.error(error); alert('تعذر حفظ الإعدادات. تحقق من الاتصال وصلاحيات Firebase.'); }
+});
+
+// ضغط صورة اللوجو قبل حفظها مع إعدادات المتجر.
+document.getElementById('storeLogoFileInput').addEventListener('change', event => {
+  const file = event.target.files && event.target.files[0]; if (!file) { pendingStoreLogo = undefined; return; }
+  if (!file.type.startsWith('image/')) { alert('اختر ملف صورة صالحًا.'); event.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = () => { const img = new Image(); img.onload = () => {
+    const canvas=document.createElement('canvas'); const scale=Math.min(1,600/Math.max(img.width,img.height));
+    canvas.width=Math.max(1,Math.round(img.width*scale)); canvas.height=Math.max(1,Math.round(img.height*scale));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height); pendingStoreLogo=canvas.toDataURL('image/jpeg',0.82);
+    const preview=document.getElementById('storeLogoPreview'); preview.src=pendingStoreLogo; preview.style.display='block';
+  }; img.onerror=()=>alert('تعذر قراءة الصورة. جرّب صورة أخرى.'); img.src=reader.result; }; reader.readAsDataURL(file);
+});
+document.getElementById('removeStoreLogoBtn').addEventListener('click', async () => {
+  if (!confirm('هل تريد إزالة لوجو المتجر والعودة للرمز الافتراضي؟')) return;
+  try { await db.ref('settings/storeLogo').remove(); pendingStoreLogo=undefined; document.getElementById('storeLogoFileInput').value=''; document.getElementById('storeLogoPreview').style.display='none'; await logActivity('إزالة لوجو المتجر',''); alert('تمت إزالة اللوجو.'); }
+  catch(e) { console.error(e); alert('تعذر إزالة اللوجو.'); }
+});
+
+// إدارة الشريط الإعلاني المتحرك
+const announcementForm = document.getElementById('announcementForm');
+db.ref('announcementText').on('value', snapshot => {
+  document.getElementById('announcementInput').value = snapshot.val() || "🌿 عطور وأعشاب طبيعية فاخرة على باب بيتك | ✨ اختر الوزن بالجرام الذي يناسب ذوقك بدقة | 🚚 تجهيز وطحن طازج بالكامل عند الطلب";
+});
+
+announcementForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const text = document.getElementById('announcementInput').value.trim();
+  await db.ref('announcementText').set(text);
+  alert('تم تحديث الشريط الإعلاني المتحرك بنجاح وسيظهر للعملاء فوراً!');
+});
+
+// إشعارات المتجر: تعديل/حذف/إعادة إرسال، وحالة العرض تأتي من صفحة المتجر
+const storeNotificationForm = document.getElementById('storeNotificationForm');
+const adminStoreNotifications = document.getElementById('adminStoreNotifications');
+let editingNotificationId = null;
+storeNotificationForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const title = document.getElementById('storeNotificationTitle').value.trim();
+  const message = document.getElementById('storeNotificationMessage').value.trim();
+  const type = document.getElementById('storeNotificationType').value;
+  if (!title || !message) return alert('اكتب عنوان الإشعار ونصه.');
+  try {
+    if (editingNotificationId) {
+      await db.ref('notifications/' + editingNotificationId).update({ title, message, type, updatedAt: Date.now(), displayedAt: null, displayedBy: null });
+      await logActivity('تعديل إشعار', title);
+      editingNotificationId = null;
+      storeNotificationForm.querySelector('button[type="submit"]').textContent = 'إرسال الإشعار 🔔';
+      alert('تم تعديل الإشعار.');
+    } else {
+      const ref = await db.ref('notifications').push({
+        target: 'all', title, message, type, sender: 'admin', timestamp: Date.now(), read: false, status: 'sent'
+      });
+      await logActivity('إرسال إشعار', `${title} (${ref.key})`);
+      alert('تم حفظ الإشعار. ستظهر حالة «تم عرضه» بعد تأكيد صفحة المتجر ظهوره.');
+    }
+    storeNotificationForm.reset();
+  } catch (error) {
+    console.error(error);
+    alert('تعذر حفظ الإشعار. تحقق من الاتصال وصلاحيات قاعدة البيانات.');
+  }
+});
+
+db.ref('notifications').limitToLast(50).on('value', snapshot => {
+  const entries = Object.entries(snapshot.val() || {}).map(([id, n]) => ({id, ...n}))
+    .sort((a,b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+  adminStoreNotifications.replaceChildren();
+  if (!entries.length) {
+    adminStoreNotifications.innerHTML = '<p class="empty-state">لا توجد إشعارات حتى الآن.</p>';
+    return;
+  }
+  entries.forEach(n => {
+    const item = document.createElement('article'); item.className = 'order-card';
+    const title = document.createElement('b'); title.style.color = 'var(--accent)'; title.textContent = n.title || 'إشعار';
+    const message = document.createElement('p'); message.style.marginTop = '6px'; message.textContent = n.message || '';
+    const date = document.createElement('small'); date.className = 'order-time';
+    date.textContent = n.timestamp ? new Date(Number(n.timestamp)).toLocaleString('ar-EG') : '';
+    const status = document.createElement('p'); status.style.marginTop = '6px';
+    status.textContent = n.displayedAt ? `الحالة: تم عرضه في المتجر — ${new Date(Number(n.displayedAt)).toLocaleString('ar-EG')}` : 'الحالة: محفوظ/مرسل، ولم تؤكد صفحة المتجر عرضه بعد';
+    const actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
+    const edit = document.createElement('button'); edit.className = 'action-btn'; edit.textContent = 'تعديل';
+    edit.addEventListener('click', () => {
+      editingNotificationId = n.id;
+      document.getElementById('storeNotificationTitle').value = n.title || '';
+      document.getElementById('storeNotificationMessage').value = n.message || '';
+      document.getElementById('storeNotificationType').value = n.type || 'general';
+      storeNotificationForm.querySelector('button[type="submit"]').textContent = 'حفظ تعديل الإشعار';
+      storeNotificationForm.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    const resend = document.createElement('button'); resend.className = 'action-btn'; resend.textContent = 'إعادة إرسال';
+    resend.addEventListener('click', async () => {
+      if (!confirm('إرسال نسخة جديدة من هذا الإشعار؟')) return;
+      try {
+        await db.ref('notifications').push({ target:'all', title:n.title || 'إشعار', message:n.message || '', type:n.type || 'general', sender:'admin', timestamp:Date.now(), read:false, status:'resent', resentFrom:n.id });
+        await logActivity('إعادة إرسال إشعار', n.title || n.id);
+      } catch (error) { console.error(error); alert('تعذرت إعادة الإرسال.'); }
+    });
+    const del = document.createElement('button'); del.className = 'danger-link'; del.textContent = 'حذف من المتجر واللوحة';
+    del.addEventListener('click', async () => {
+      if (!confirm('سيتم حذف الإشعار من قاعدة البيانات، وبالتالي يختفي من المتجر واللوحة. هل تريد المتابعة؟')) return;
+      try { await db.ref('notifications/' + n.id).remove(); await logActivity('حذف إشعار', n.title || n.id); }
+      catch (error) { console.error(error); alert('تعذر حذف الإشعار.'); }
+    });
+    actions.append(edit, resend, del); item.append(title, message, date, status, actions); adminStoreNotifications.appendChild(item);
+  });
+});
+
+// سجل العمليات
+const activityLogList = document.getElementById('activityLogList');
+db.ref('activityLog').limitToLast(100).on('value', snapshot => {
+  if (!activityLogList) return;
+  const entries = Object.entries(snapshot.val() || {}).map(([id, item]) => ({id, ...item})).sort((a,b)=>Number(b.timestamp||0)-Number(a.timestamp||0));
+  activityLogList.replaceChildren();
+  if (!entries.length) { activityLogList.innerHTML = '<p class="empty-state">لا توجد عمليات مسجلة حتى الآن.</p>'; return; }
+  entries.forEach(entry => {
+    const row = document.createElement('article'); row.className = 'order-card';
+    const title = document.createElement('b'); title.textContent = entry.action || 'عملية';
+    const details = document.createElement('p'); details.textContent = entry.details || '';
+    const time = document.createElement('small'); time.className = 'order-time'; time.textContent = entry.timestamp ? new Date(Number(entry.timestamp)).toLocaleString('ar-EG') : '';
+    row.append(title, details, time); activityLogList.appendChild(row);
+  });
+});
+
+// إدارة إعلانات الصور، مع ضغط الصورة قبل حفظها لتقليل حجم البيانات
+const imageAdForm = document.getElementById('imageAdForm');
+const adImageFile = document.getElementById('adImageFile');
+const adImagePreview = document.getElementById('adImagePreview');
+let currentAdImage = '';
+adImageFile.addEventListener('change', async () => {
+  const file = adImageFile.files && adImageFile.files[0];
+  currentAdImage = '';
+  if (!file) { adImagePreview.style.display = 'none'; return; }
+  if (!file.type.startsWith('image/')) { alert('اختر ملف صورة صحيحًا.'); adImageFile.value = ''; return; }
+  try {
+    currentAdImage = await compressImageFile(file);
+    adImagePreview.src = currentAdImage;
+    adImagePreview.style.display = 'block';
+  } catch (error) {
+    console.error(error);
+    alert('لم نتمكن من قراءة الصورة. جرّب صورة أخرى.');
+  }
+});
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const maxWidth = 1100;
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.76));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+imageAdForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!currentAdImage) return alert('اختر صورة الإعلان أولاً.');
+  const link = document.getElementById('adImageLink').value.trim();
+  if (link && !/^(https?:\/\/|#)/i.test(link)) return alert('الرابط يجب أن يبدأ بـ https:// أو يكون رابطًا داخليًا مثل #products.');
+  try {
+    await db.ref('imageAds').push({
+      title: document.getElementById('adImageTitle').value.trim(),
+      text: document.getElementById('adImageText').value.trim(),
+      buttonText: document.getElementById('adImageButton').value.trim() || 'تسوق الآن ←',
+      link: link || '#products',
+      image: currentAdImage,
+      active: true,
+      createdAt: Date.now()
+    });
+    imageAdForm.reset();
+    currentAdImage = '';
+    adImagePreview.removeAttribute('src');
+    adImagePreview.style.display = 'none';
+    alert('تم نشر الإعلان المصور في المتجر.');
+  } catch (error) {
+    console.error(error);
+    alert('تعذر نشر الإعلان. قد تكون الصورة كبيرة أو صلاحيات قاعدة البيانات تمنع الكتابة.');
+  }
+});
+const imageAdsList = document.getElementById('imageAdsList');
+db.ref('imageAds').on('value', snapshot => {
+  const entries = Object.entries(snapshot.val() || {}).map(([id, ad]) => ({id, ...ad}))
+    .sort((a,b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  imageAdsList.replaceChildren();
+  if (!entries.length) {
+    imageAdsList.innerHTML = '<p class="empty-state">لم تتم إضافة إعلانات مصورة بعد.</p>';
+    return;
+  }
+  entries.forEach(ad => {
+    const item = document.createElement('div');
+    item.className = 'admin-ad-item';
+    const img = document.createElement('img');
+    img.src = ad.image || '';
+    img.alt = ad.title || 'إعلان';
+    const info = document.createElement('div');
+    const title = document.createElement('b');
+    title.textContent = ad.title || 'إعلان بدون عنوان';
+    const desc = document.createElement('p');
+    desc.textContent = (ad.text || '') + (ad.active === false ? ' • متوقف' : ' • منشور');
+    info.append(title, desc);
+    const actions = document.createElement('div');
+    actions.className = 'ad-actions';
+    const toggle = document.createElement('button');
+    toggle.className = 'action-btn ' + (ad.active === false ? 'btn-unblock' : 'btn-block');
+    toggle.textContent = ad.active === false ? 'تفعيل' : 'إيقاف';
+    toggle.addEventListener('click', () => db.ref('imageAds/' + ad.id).update({active: ad.active === false}));
+    const del = document.createElement('button');
+    del.className = 'danger-link';
+    del.style.marginTop = '8px';
+    del.textContent = 'حذف';
+    del.addEventListener('click', async () => {
+      if (confirm('هل تريد حذف هذا الإعلان؟')) await db.ref('imageAds/' + ad.id).remove();
+    });
+    actions.append(toggle, document.createElement('br'), del);
+    item.append(img, info, actions);
+    imageAdsList.appendChild(item);
+  });
+});
+
+// صور المنتجات
+const pImageFile = document.getElementById('pImageFile');
+const pImagePreview = document.getElementById('pImagePreview');
+
+pImageFile.addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentBase64Image = e.target.result;
+      pImagePreview.src = currentBase64Image;
+      pImagePreview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    currentBase64Image = "";
+    pImagePreview.style.display = 'none';
+  }
+});
+
+// إضافة وتعديل وإخفاء وحذف المنتجات
+const productForm = document.getElementById('productForm');
+const editingProductIdInput = document.getElementById('editingProductId');
+const productFormHeading = document.getElementById('productFormHeading');
+const productSubmitBtn = document.getElementById('productSubmitBtn');
+const cancelProductEdit = document.getElementById('cancelProductEdit');
+const pStock = document.getElementById('pStock');
+function resetProductEditor() {
+  productForm.reset(); editingProductIdInput.value = ''; currentBase64Image = '';
+  pImagePreview.removeAttribute('src'); pImagePreview.style.display = 'none';
+  productFormHeading.textContent = 'إضافة منتج جديد'; productSubmitBtn.textContent = 'حفظ وإضافة المنتج ＋';
+  cancelProductEdit.style.display = 'none';
+}
+function beginProductEdit(id, product) {
+  editingProductIdInput.value = id;
+  document.getElementById('pName').value = product.name || '';
+  document.getElementById('pCategory').value = product.category || 'توابل';
+  document.getElementById('pType').value = product.type || 'pack';
+  document.getElementById('pPrice').value = Number(product.price || 0);
+  document.getElementById('pDesc').value = product.desc || '';
+  if (pStock) pStock.value = product.stock ?? '';
+  currentBase64Image = product.image || '';
+  if (currentBase64Image) { pImagePreview.src = currentBase64Image; pImagePreview.style.display = 'block'; }
+  else { pImagePreview.removeAttribute('src'); pImagePreview.style.display = 'none'; }
+  productFormHeading.textContent = 'تعديل المنتج'; productSubmitBtn.textContent = 'حفظ التعديلات'; cancelProductEdit.style.display = 'inline-flex';
+  productForm.scrollIntoView({behavior:'smooth', block:'start'});
+}
+cancelProductEdit.addEventListener('click', resetProductEditor);
+productForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const name = document.getElementById('pName').value.trim();
+  const category = document.getElementById('pCategory').value;
+  const type = document.getElementById('pType').value;
+  const price = Number(document.getElementById('pPrice').value);
+  const desc = document.getElementById('pDesc').value.trim();
+  if (!name || !Number.isFinite(price) || price < 0) return alert('اكتب اسم المنتج وسعرًا صحيحًا.');
+  const editingId = editingProductIdInput.value;
+  const stockRaw = pStock ? pStock.value.trim() : '';
+  const productData = { name, category, type, price, image: currentBase64Image || '', desc, ...(stockRaw === '' ? { stock: null } : { stock: Math.max(0, Math.floor(Number(stockRaw))) }), updatedAt: Date.now() };
+  try {
+    if (editingId) {
+      await db.ref(`products/${editingId}`).update(productData);
+      await logActivity('تعديل منتج', name);
+      alert('تم حفظ تعديلات المنتج وظهورها في المتجر.');
+    } else {
+      await db.ref('products').push({ ...productData, createdAt: Date.now(), active: true });
+      await logActivity('إضافة منتج', name);
+      alert('تمت إضافة المنتج بنجاح.');
+    }
+    resetProductEditor();
+  } catch (error) { console.error(error); alert('تعذر حفظ المنتج. تحقق من الاتصال وصلاحيات قاعدة البيانات.'); }
+});
+
+db.ref('products').on('value', snapshot => {
+  const data = snapshot.val() || {};
+  productsTableBody.replaceChildren();
+  const entries = Object.entries(data);
+  if (!entries.length) {
+    productsTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد منتجات حتى الآن.</td></tr>';
+  } else {
+    entries.forEach(([id, product]) => {
+      const row = document.createElement('tr');
+      const imgTd = document.createElement('td');
+      if (product.image) { const img = document.createElement('img'); img.src = product.image; img.alt = product.name || 'صورة المنتج'; img.style.cssText = 'width:45px;height:45px;border-radius:6px;object-fit:cover;'; imgTd.appendChild(img); }
+      else imgTd.textContent = '—';
+      const nameTd = document.createElement('td'); const name = document.createElement('b'); name.textContent = product.name || 'بدون اسم'; nameTd.appendChild(name);
+      if (product.active === false) { const hidden = document.createElement('small'); hidden.textContent = ' • مخفي'; hidden.style.color = '#b45309'; nameTd.appendChild(hidden); }
+      const categoryTd = document.createElement('td'); categoryTd.textContent = product.category || 'عام';
+      const typeTd = document.createElement('td'); typeTd.textContent = product.type === 'loose' ? 'سايب (بالوزن)' : 'عبوة';
+      const priceTd = document.createElement('td'); priceTd.textContent = money(product.price);
+      const actionTd = document.createElement('td'); actionTd.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+      const editBtn = document.createElement('button'); editBtn.className = 'action-btn'; editBtn.textContent = 'تعديل'; editBtn.addEventListener('click', () => beginProductEdit(id, product));
+      const toggleBtn = document.createElement('button'); toggleBtn.className = 'action-btn'; toggleBtn.textContent = product.active === false ? 'إظهار' : 'إخفاء';
+      toggleBtn.addEventListener('click', async () => { try { const active = product.active === false; await db.ref(`products/${id}`).update({ active, updatedAt:Date.now() }); await logActivity(active ? 'إظهار منتج' : 'إخفاء منتج', product.name || id); } catch(e) { console.error(e); alert('تعذر تغيير حالة المنتج.'); } });
+      const delBtn = document.createElement('button'); delBtn.className = 'danger-link'; delBtn.textContent = 'حذف ✕'; delBtn.addEventListener('click', () => window.deleteProduct(id, product.name || id));
+      actionTd.append(editBtn, toggleBtn, delBtn); row.append(imgTd, nameTd, categoryTd, typeTd, priceTd, actionTd); productsTableBody.appendChild(row);
+    });
+  }
+  document.getElementById('statProductsCount').textContent = entries.length;
+});
+window.deleteProduct = async (id, productName = id) => {
+  if (!confirm('هل أنت متأكد من حذف هذا المنتج نهائيًا؟')) return;
+  try { await db.ref(`products/${id}`).remove(); await logActivity('حذف منتج', productName); if (editingProductIdInput.value === id) resetProductEditor(); }
+  catch (error) { console.error(error); alert('تعذر حذف المنتج.'); }
+};
+
+// الطلبات وتحديد سعر التوصيل
+const allowedStatuses = ['جديد', 'قيد التجهيز', 'تم الشحن', 'مكتمل'];
+db.ref('orders').on('value', snapshot => {
+  const data = snapshot.val() || {};
+  ordersContainer.replaceChildren();
+  const allEntries = Object.entries(data).sort((a, b) => Number(b[1]?.timestamp || 0) - Number(a[1]?.timestamp || 0));
+  const searchTerm = (document.getElementById('ordersSearch')?.value || '').trim().toLowerCase();
+  const statusFilter = document.getElementById('ordersStatusFilter')?.value || 'all';
+  const entries = allEntries.filter(([id,o]) => (!searchTerm || [id,o.customerName,o.phone].some(v=>String(v||'').toLowerCase().includes(searchTerm))) && (statusFilter==='all' || (o.status||'جديد')===statusFilter));
+  
+  document.getElementById('statOrdersCount').textContent = entries.length;
+
+  if (!entries.length) {
+    ordersContainer.innerHTML = '<p class="empty-state">لا توجد طلبات حتى الآن.</p>';
+    return;
+  }
+
+  entries.forEach(([id, order]) => {
+    const deliveryFee = order.deliveryFee !== undefined ? order.deliveryFee : '';
+    const itemsList = (Array.isArray(order.items) ? order.items : Object.values(order.items || {})).map(item => 
+      `<div>• ${item?.name || 'منتج'} (${item?.weight || 'عبوة'}) — ${money(item?.price || 0)}</div>`
+    ).join('');
+
+    const card = document.createElement('article');
+    card.className = 'order-card';
+    card.innerHTML = `
+      <div class="order-header">
+        <div>
+          <b>العميل: ${order.customerName || 'غير محدد'}</b>
+          <div>الهاتف: ${order.phone || 'غير مسجل'}</div>
+        </div>
+        <span class="order-status">${order.status || 'جديد'}</span>
+      </div>
+      <p>العنوان: ${order.address || 'بدون عنوان'}</p>
+      <small class="order-time">وقت الطلب: ${order.timestamp ? new Date(Number(order.timestamp)).toLocaleString('ar-EG') : 'غير محدد'}</small>
+      <div class="order-items">${itemsList}</div>
+      
+      <!-- إدخال وتعديل سعر التوصيل -->
+      <div style="display:flex; align-items:center; gap:10px; margin: 12px 0; background:rgba(212,175,55,0.08); padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+        <label style="color:var(--accent); font-weight:700;">سعر التوصيل (ج.م):</label>
+        <input type="number" id="delivery_${id}" value="${deliveryFee}" placeholder="اكتب سعر التوصيل..." style="background:var(--bg-main); border:1px solid var(--border-color); color:#fff; padding:6px 10px; border-radius:6px; width:140px;" />
+        <button class="primary-btn" style="padding:6px 14px; font-size:0.85rem;" onclick="saveDeliveryFee('${id}')">حفظ التوصيل 💾</button>
+      </div>
+
+      <div class="order-footer">
+        <b class="order-total">إجمالي المنتجات: ${money(order.total)}</b>
+        <select class="order-status-select" onchange="updateOrderStatus('${id}', this.value)">
+          ${allowedStatuses.map(st => `<option value="${st}" ${st === (order.status || 'جديد') ? 'selected' : ''}>${st}</option>`).join('')}
+        </select>
+      </div>
+    `;
+    ordersContainer.appendChild(card);
+  });
+});
+
+document.getElementById('ordersSearch')?.addEventListener('input', () => db.ref('orders').once('value').then(snap => { const e = new Event('value'); /* listener redraws on next database change; force safe local refresh below */ renderOrdersFromSnapshot(snap); }));
+document.getElementById('ordersStatusFilter')?.addEventListener('change', () => db.ref('orders').once('value').then(renderOrdersFromSnapshot));
+function renderOrdersFromSnapshot(snapshot) {
+  // Trigger the same renderer with a local snapshot adapter, avoiding any database write.
+  const data = snapshot.val() || {}; ordersContainer.replaceChildren();
+  const term=(document.getElementById('ordersSearch')?.value||'').trim().toLowerCase(); const filter=document.getElementById('ordersStatusFilter')?.value||'all';
+  const entries=Object.entries(data).sort((a,b)=>Number(b[1]?.timestamp||0)-Number(a[1]?.timestamp||0)).filter(([id,o])=>(!term||[id,o.customerName,o.phone].some(v=>String(v||'').toLowerCase().includes(term)))&&(filter==='all'||(o.status||'جديد')===filter));
+  if(!entries.length){ordersContainer.innerHTML='<p class="empty-state">لا توجد طلبات مطابقة للبحث.</p>';return;}
+  entries.forEach(([id,order])=>{const card=document.createElement('article');card.className='order-card';const itemsList=(Array.isArray(order.items)?order.items:Object.values(order.items||{})).map(item=>`<div>• ${item?.name||'منتج'} (${item?.weight||'عبوة'}) — ${money(item?.price||0)}</div>`).join('');const fee=order.deliveryFee!==undefined?order.deliveryFee:'';card.innerHTML=`<div class="order-header"><div><b>العميل: ${order.customerName||'غير محدد'}</b><div>الهاتف: ${order.phone||'غير مسجل'}</div><small>رقم التتبع: ${id}</small></div><span class="order-status">${order.status||'جديد'}</span></div><p>العنوان: ${order.address||'بدون عنوان'}</p><small class="order-time">وقت الطلب: ${order.timestamp?new Date(Number(order.timestamp)).toLocaleString('ar-EG'):'غير محدد'}</small><div class="order-items">${itemsList}</div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;background:rgba(212,175,55,.08);padding:10px;border-radius:8px;border:1px solid var(--border-color)"><label style="color:var(--accent);font-weight:700">سعر التوصيل (ج.م):</label><input type="number" id="delivery_${id}" value="${fee}" placeholder="سعر التوصيل" style="background:var(--bg-main);border:1px solid var(--border-color);color:#fff;padding:6px 10px;border-radius:6px;width:140px"><button class="primary-btn" style="padding:6px 14px;font-size:.85rem" onclick="saveDeliveryFee('${id}')">حفظ التوصيل</button></div><div class="order-footer"><b class="order-total">إجمالي المنتجات: ${money(order.total)}</b><select class="order-status-select" onchange="updateOrderStatus('${id}',this.value)">${allowedStatuses.map(st=>`<option value="${st}" ${st===(order.status||'جديد')?'selected':''}>${st}</option>`).join('')}</select></div></div>`;ordersContainer.appendChild(card);});
+}
+window.saveDeliveryFee = async (id) => {
+  const val = Number(document.getElementById(`delivery_${id}`).value);
+  if (isNaN(val) || val < 0) return alert('أدخل سعر توصيل صحيح.');
+  await db.ref(`orders/${id}`).update({ deliveryFee: val });
+  alert('تم حفظ سعر التوصيل بنجاح.');
+};
+
+window.updateOrderStatus = async (id, newStatus) => {
+  try {
+    const snap = await db.ref(`orders/${id}`).once('value'); const order = snap.val() || {}; const oldStatus = order.status || 'جديد';
+    if (oldStatus === newStatus) return;
+    const update = { status: newStatus, statusUpdatedAt: Date.now(), statusHistory: { ...(order.statusHistory || {}), [Date.now()]: { status: newStatus, previousStatus: oldStatus, timestamp: Date.now() } } };
+    await db.ref(`orders/${id}`).update(update);
+    await logActivity('تغيير حالة طلب', `${id} — ${oldStatus} ← ${newStatus}`);
+  } catch (error) { console.error(error); alert('تعذر تحديث حالة الطلب.'); }
+};
+
+// العملاء
+db.ref('customers').on('value', snapshot => {
+  const data = snapshot.val() || {};
+  customersTableBody.replaceChildren();
+  const entries = Object.entries(data);
+
+  document.getElementById('statCustomersCount').textContent = entries.length;
+
+  if (!entries.length) {
+    customersTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا يوجد عملاء مسجلون بعد.</td></tr>';
+    return;
+  }
+
+  entries.forEach(([id, cust]) => {
+    const row = document.createElement('tr');
+    const dateStr = cust.createdAt ? new Date(Number(cust.createdAt)).toLocaleString('ar-EG') : 'غير معروف';
+    const isBlocked = cust.isBlocked === true;
+
+    row.innerHTML = `
+      <td><b>${cust.name || id}</b></td>
+      <td>${cust.phone || 'غير مسجل'}</td>
+      <td>${dateStr}</td>
+      <td><span style="color:${isBlocked ? 'var(--danger)' : 'var(--success)'}; font-weight:700;">${isBlocked ? 'محظور 🚫' : 'نشط 🟢'}</span></td>
+      <td>
+        <button class="action-btn btn-msg" onclick="messageCustomer('${cust.phone || id}')">رسالة 💬</button>
+        <button class="action-btn ${isBlocked ? 'btn-unblock' : 'btn-block'}" onclick="toggleBlockCustomer('${id}', ${isBlocked})">
+          ${isBlocked ? 'إلغاء الحظر' : 'حظر 🚫'}
+        </button>
+      </td>
+    `;
+    customersTableBody.appendChild(row);
+  });
+});
+
+window.toggleBlockCustomer = async (id, isBlocked) => {
+  await db.ref(`customers/${id}`).update({ isBlocked: !isBlocked });
+};
+
+window.messageCustomer = (userKey) => {
+  showPanel('chatPanel', document.getElementById('navChatBtn'));
+  loadUserChat(userKey);
+};
+
+// المحادثات
+// بحث سريع في كتالوج المنتجات دون تعديل بياناتها.
+const catalogSearchInput = document.getElementById('productCatalogSearch');
+function filterCatalogRows() { const q=(catalogSearchInput?.value||'').trim().toLocaleLowerCase('ar'); document.querySelectorAll('#productsTableBody tr').forEach(row=>{row.style.display=!q||row.textContent.toLocaleLowerCase('ar').includes(q)?'':'none';}); }
+catalogSearchInput?.addEventListener('input',filterCatalogRows);
+if (productsTableBody && window.MutationObserver) new MutationObserver(filterCatalogRows).observe(productsTableBody,{childList:true,subtree:true});
+
+function renderMessages(messages) {
+  adminChatMsgs.replaceChildren();
+  const entries = Object.entries(messages || {}).sort((a, b) => Number(a[1]?.timestamp || 0) - Number(b[1]?.timestamp || 0));
+  if (!entries.length) {
+    adminChatMsgs.innerHTML = '<p class="empty-state">لا توجد رسائل في هذه المحادثة بعد.</p>';
+    return;
+  }
+  entries.forEach(([, message]) => {
+    const bubble = document.createElement('div');
+    bubble.className = `admin-chat-message ${message.sender === 'admin' ? 'from-admin' : 'from-customer'}`;
+    bubble.innerHTML = `<small>${message.sender === 'admin' ? 'الإدارة' : String(message.sender || 'العميل')}</small><div>${String(message.text || '')}</div>`;
+    adminChatMsgs.appendChild(bubble);
+  });
+  adminChatMsgs.scrollTop = adminChatMsgs.scrollHeight;
+}
+
+function loadUserChat(user) {
+  activeChatUser = user;
+  document.querySelectorAll('.user-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.chatUser === user);
+  });
+  if (activeChatRef && activeChatHandler) activeChatRef.off('value', activeChatHandler);
+  activeChatRef = db.ref(`chats/${user}`);
+  activeChatHandler = snapshot => renderMessages(snapshot.val() || {});
+  activeChatRef.on('value', activeChatHandler);
+}
+
+db.ref('chats').on('value', snapshot => {
+  const data = snapshot.val() || {};
+  const users = Object.keys(data);
+  chatUsersList.replaceChildren();
+  document.getElementById('statChatsCount').textContent = users.length;
+  
+  if (!users.length) {
+    chatUsersList.innerHTML = '<p class="empty-state">لا توجد محادثات حتى الآن.</p>';
+    return;
+  }
+  users.forEach(user => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = `user-item${activeChatUser === user ? ' active' : ''}`;
+    item.dataset.chatUser = user;
+    item.textContent = user;
+    item.addEventListener('click', () => loadUserChat(user));
+    chatUsersList.appendChild(item);
+  });
+});
+
+document.getElementById('adminChatForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = document.getElementById('adminChatInput');
+  const text = input.value.trim();
+  if (!text || !activeChatUser) return;
+  await db.ref(`chats/${activeChatUser}`).push({ sender: 'admin', text, timestamp: Date.now() });
+  input.value = '';
+});
+  
+// سجل الزيارات المباشرة المرسلة من صفحة المتجر.
+const visitorSessionsBody = document.getElementById('visitorSessionsBody');
+function renderVisitorSessions(snapshot) {
+  if (!visitorSessionsBody) return;
+  const term=(document.getElementById('visitorSearchInput')?.value||'').trim().toLocaleLowerCase('ar');
+  const filter=document.getElementById('visitorStatusFilter')?.value||'all'; const rows=[];
+  snapshot.forEach(child=>{const v=child.val()||{};rows.push({id:child.key,...v});}); rows.sort((x,y)=>Number(y.startedAt||0)-Number(x.startedAt||0));
+  const filtered=rows.filter(v=>{const inside=v.status==='داخل المتجر'&&!v.endedAt;const txt=`${v.customerName||'زائر بدون اسم'} ${v.sessionId||v.id}`.toLocaleLowerCase('ar');return (!term||txt.includes(term))&&(filter==='all'||(filter==='inside'?inside:!inside));});
+  visitorSessionsBody.replaceChildren();
+  if(!filtered.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='لا توجد زيارات مطابقة.';tr.appendChild(td);visitorSessionsBody.appendChild(tr);return;}
+  filtered.slice(0,500).forEach(v=>{const tr=document.createElement('tr');const vals=[v.customerName||'زائر بدون اسم',v.startedAt?new Date(Number(v.startedAt)).toLocaleString('ar-EG'):'—',v.lastSeenAt?new Date(Number(v.lastSeenAt)).toLocaleString('ar-EG'):'—',v.endedAt?new Date(Number(v.endedAt)).toLocaleString('ar-EG'):'—',(v.status==='داخل المتجر'&&!v.endedAt)?'🟢 داخل المتجر':'⚪ غادر المتجر'];vals.forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td);});visitorSessionsBody.appendChild(tr);});
+}
+db.ref('visitorSessions').limitToLast(500).on('value',renderVisitorSessions,error=>{console.warn(error);if(visitorSessionsBody)visitorSessionsBody.innerHTML='<tr><td colspan="5">تعذر تحميل سجل الزيارات. تحقق من صلاحيات Firebase.</td></tr>';});
+document.getElementById('visitorSearchInput')?.addEventListener('input',()=>db.ref('visitorSessions').limitToLast(500).once('value').then(renderVisitorSessions));
+document.getElementById('visitorStatusFilter')?.addEventListener('change',()=>db.ref('visitorSessions').limitToLast(500).once('value').then(renderVisitorSessions));
+</script>
+</body>
+</html>
